@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SupportVision Live Workspace</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      background-color: #020617;
+      color: #f8fafc;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.04) 0%, transparent 40%);
+    }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col selection:bg-indigo-500/30">
+
+  <div id="view-login" class="m-auto w-96 hidden">
+    <div class="p-8 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm mx-auto shadow-lg shadow-indigo-600/20">SV</div>
+        <h1 class="text-lg font-bold tracking-tight text-white">SupportVision Terminal</h1>
+        <p class="text-[11px] text-slate-500">Authorized Personnel Node Authentication Gateway</p>
+      </div>
+      <form id="login-form" class="space-y-4">
+        <div class="space-y-1">
+          <label class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Operator Email</label>
+          <input type="email" id="login-email" value="agent@supportvision.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500" required>
+        </div>
+        <div class="space-y-1">
+          <label class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Access Key</label>
+          <input type="password" id="login-password" value="password123" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500" required>
+        </div>
+        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-semibold text-white shadow-lg shadow-indigo-600/20 transition active:scale-[0.98]">
+          Authenticate Gateway
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="view-app" class="flex-1 flex h-full w-full hidden">
+    <aside class="w-60 border-r border-slate-900 bg-slate-950 flex flex-col justify-between p-4">
+      <div class="space-y-6">
+        <div class="flex items-center gap-3 px-2 py-1">
+          <div class="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-xs">SV</div>
+          <div class="flex flex-col">
+            <span class="text-xs font-bold text-white tracking-wide">SupportVision</span>
+            <span class="text-[9px] text-indigo-400 uppercase font-black tracking-widest">SFU Client Node</span>
+          </div>
+        </div>
+        <nav class="space-y-1">
+          <button onclick="switchTab('DASHBOARD')" id="btn-nav-dashboard" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-indigo-400 bg-indigo-600/10 border border-indigo-500/10"><i data-lucide="layout-grid" class="w-4 h-4"></i> Operator Deck</button>
+          <button onclick="switchTab('HISTORY')" id="btn-nav-history" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-900"><i data-lucide="history" class="w-4 h-4"></i> Audit Logs</button>
+          <button onclick="switchTab('ADMIN')" id="btn-nav-admin" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-900"><i data-lucide="radio" class="w-4 h-4"></i> Telemetry Hub</button>
+        </nav>
+      </div>
+      <button onclick="logout()" class="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-950/20 rounded-lg flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Disconnect</button>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+      <header class="mb-8 pb-4 border-b border-slate-900">
+        <h1 id="workspace-title" class="text-xs font-mono font-bold text-slate-500 uppercase tracking-widest">Operator Deck</h1>
+        <p id="workspace-subtitle" class="text-xs text-slate-400 mt-1">Real-time control terminal interface.</p>
+      </header>
+
+      <div id="tab-dashboard" class="tab-content max-w-xl mx-auto p-8 rounded-2xl bg-slate-900/40 border border-slate-800/80 backdrop-blur space-y-6">
+        <div class="flex items-center gap-4 border-b border-slate-800 pb-4">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center"><i data-lucide="video" class="w-5 h-5"></i></div>
+          <div>
+            <h2 class="text-sm font-bold text-slate-100">Provision Support Environment</h2>
+            <p class="text-[11px] text-slate-400">Generates instant secure signaling connection links for end users.</p>
+          </div>
+        </div>
+        
+        <div id="session-initial">
+          <button onclick="createSession()" class="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white rounded-xl shadow-lg shadow-indigo-600/10 transition active:scale-95">Generate Environment Link</button>
+        </div>
+
+        <div id="session-ready" class="space-y-4 hidden">
+          <div class="text-xs text-emerald-400 bg-emerald-950/20 p-3 rounded-xl border border-emerald-500/20 flex items-center gap-2 font-medium"><i data-lucide="check-circle" class="w-4 h-4"></i> Pipeline Channel Provisioned Successfully</div>
+          <div class="space-y-1.5">
+            <label class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Client Invite Link</label>
+            <div class="flex gap-2">
+              <input type="text" id="invite-url-input" readonly class="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-indigo-300 font-mono focus:outline-none">
+              <button onclick="copyInviteLink()" class="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 text-slate-300 transition active:scale-95 flex items-center justify-center"><i data-lucide="copy" class="w-4 h-4"></i></button>
+            </div>
+          </div>
+          <button onclick="launchCallRoom()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-xs font-bold text-white rounded-xl shadow-xl shadow-indigo-600/10 hover:brightness-110 active:scale-[0.98] transition-all">Launch Video Console Workspace</button>
+        </div>
+      </div>
+
+      <div id="tab-history" class="tab-content max-w-4xl mx-auto hidden">
+        <div class="bg-slate-900/60 border border-slate-850 rounded-2xl overflow-hidden shadow-2xl">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-950 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-850">
+              <tr><th class="p-4">Channel Routing Key</th><th class="p-4">Pipeline Status</th><th class="p-4">Metrics Profile Duration</th></tr>
+            </thead>
+            <tbody id="history-table-body" class="divide-y divide-slate-900 text-xs text-slate-300"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-admin" class="tab-content max-w-4xl mx-auto space-y-6 hidden">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-5 bg-slate-900/80 border border-slate-850 rounded-2xl flex items-center justify-between shadow-xl">
+            <div><span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Active Channels</span><div id="metric-active" class="text-xl font-black text-white mt-0.5">0</div></div>
+            <div class="p-3 bg-indigo-600/10 border border-indigo-500/20 rounded-xl text-indigo-400"><i data-lucide="activity" class="w-5 h-5 animate-pulse"></i></div>
+          </div>
+          <div class="p-5 bg-slate-900/80 border border-slate-850 rounded-2xl flex items-center justify-between shadow-xl">
+            <div><span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Connected Peers</span><div id="metric-peers" class="text-xl font-black text-white mt-0.5">0</div></div>
+            <div class="p-3 bg-emerald-600/10 border border-emerald-500/20 rounded-xl text-emerald-400"><i data-lucide="users" class="w-5 h-5"></i></div>
+          </div>
+          <div class="p-5 bg-slate-900/80 border border-slate-850 rounded-2xl flex items-center justify-between shadow-xl">
+            <div><span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">CPU Core Load</span><div id="metric-load" class="text-xl font-black text-rose-400 mt-0.5">12.4%</div></div>
+            <div class="p-3 bg-rose-600/10 border border-rose-500/20 rounded-xl text-rose-400"><i data-lucide="shield-alert" class="w-5 h-5"></i></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="view-room" class="h-screen w-screen hidden bg-[#030712] p-4 gap-4 font-sans">
+    <div class="flex-1 flex flex-col bg-slate-900/60 backdrop-blur-xl border border-slate-850 rounded-2xl overflow-hidden relative">
+      <div class="absolute top-4 left-4 z-20 flex items-center gap-4 bg-slate-950/80 backdrop-blur border border-slate-800 px-4 py-2 rounded-xl shadow-xl text-xs text-white">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span id="webrtc-status-badge" class="font-semibold uppercase tracking-wider">Link Active</span>
+        </div>
+        <div class="h-4 w-px bg-slate-800"></div>
+        <div class="flex gap-3 text-[11px] text-slate-400 font-mono">
+          <span>BW: <b id="telemetry-bitrate" class="text-indigo-400">1420 kbps</b></span>
+          <span>LOSS: <b class="text-emerald-400">0.0%</b></span>
+        </div>
+      </div>
+
+      <div class="flex-1 bg-[#090d16] relative flex items-center justify-center p-4">
+        <video id="remote-video" autoplay playsinline class="w-full h-full object-cover rounded-xl border border-slate-800/80 hidden"></video>
+        <div id="video-placeholder" class="text-center p-6 border border-dashed border-slate-800 rounded-2xl max-w-xs bg-slate-900/20">
+          <p class="text-xs font-semibold text-slate-300">Awaiting remote stream tunnel connection...</p>
+        </div>
+        
+        <div class="absolute bottom-6 right-6 w-48 h-32 bg-slate-950 rounded-xl overflow-hidden border-2 border-slate-800 shadow-2xl z-10">
+          <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
+        </div>
+      </div>
+
+      <div class="h-20 bg-slate-950/80 border-t border-slate-800 backdrop-blur flex items-center justify-center gap-4">
+        <button onclick="toggleAudio()" id="btn-toggle-audio" class="p-3 bg-slate-900 border border-slate-800 text-slate-200 rounded-xl hover:bg-slate-800 transition"><i data-lucide="mic" class="w-4 h-4"></i></button>
+        <button onclick="toggleVideo()" id="btn-toggle-video" class="p-3 bg-slate-900 border border-slate-800 text-slate-200 rounded-xl hover:bg-slate-800 transition"><i data-lucide="video" class="w-4 h-4"></i></button>
+        <div class="w-px h-6 bg-slate-800"></div>
+        <button onclick="exitCallRoom()" class="p-3 bg-gradient-to-r from-rose-600 to-red-600 border border-rose-500 text-white rounded-xl shadow-lg hover:brightness-110 transition"><i data-lucide="phone-off" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+
+    <div class="w-88 border border-slate-850 bg-slate-900 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 bg-slate-950/40 flex items-center gap-2">
+        <div class="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+        <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Secure Workspace Chat</span>
+      </div>
+      <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+      <form id="chat-form" class="p-3 border-t border-slate-800 bg-slate-950/40 flex gap-2">
+        <input type="text" id="chat-input" placeholder="Type message stream..." class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" required>
+        <button type="submit" class="p-2.5 bg-indigo-600 rounded-xl text-white hover:bg-indigo-500 transition shadow-md"><i data-lucide="send" class="w-3.5 h-3.5"></i></button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:5000";
+    let token = "";
+    let userProfile = null;
+    let targetSession = null;
+    let socket = null;
+    let pc = null;
+    let localStream = null;
+    let micEnabled = true;
+    let camEnabled = true;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      const urlParams = new URLSearchParams(window.location.search);
+      const room = urlParams.get('room');
+      
+      if (room) {
+        targetSession = { id: room };
+        userProfile = { role: 'CUSTOMER', name: 'Client Guest (' + Math.floor(100+Math.random()*900) + ')' };
+        initWorkspaceRoomPipeline();
+      } else {
+        showView('view-login');
+      }
+    });
+
+    function showView(viewId) {
+      ['view-login', 'view-app', 'view-room'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      document.getElementById(viewId).classList.remove('hidden');
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('workspace-title').innerText = tabName + " NODE TERMINAL";
+      
+      ['dashboard', 'history', 'admin'].forEach(t => {
+        const el = document.getElementById('btn-nav-' + t);
+        if (t === tabName.toLowerCase()) {
+          el.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-indigo-400 bg-indigo-600/10 border border-indigo-500/10";
+        } else {
+          el.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-900";
+        }
+      });
+
+      if (tabName === 'DASHBOARD') document.getElementById('tab-dashboard').classList.remove('hidden');
+      if (tabName === 'HISTORY') { document.getElementById('tab-history').classList.remove('hidden'); fetchHistoryLogs(); }
+      if (tabName === 'ADMIN') { document.getElementById('tab-admin').classList.remove('hidden'); fetchTelemetryMetrics(); }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        token = data.token;
+        userProfile = data.user;
+        showView('view-app');
+        switchTab('DASHBOARD');
+      } catch (err) {
+        alert("Authentication failure. Verify that backend execution script is running on port 5000.");
+      }
+    });
+
+    async function createSession() {
+      const res = await fetch(`${API_BASE}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        targetSession = await res.json();
+        document.getElementById('invite-url-input').value = `${window.location.origin}${window.location.pathname}?room=${targetSession.id}`;
+        document.getElementById('session-initial').classList.add('hidden');
+        document.getElementById('session-ready').classList.remove('hidden');
+      }
+    }
+
+    function copyInviteLink() {
+      const el = document.getElementById('invite-url-input');
+      el.select();
+      document.execCommand('copy');
+      alert("Invitation network URL route copied directly onto workspace system buffer ledger.");
+    }
+
+    function launchCallRoom() { initWorkspaceRoomPipeline(); }
+
+    async function fetchHistoryLogs() {
+      const res = await fetch(`${API_BASE}/api/sessions`);
+      if (res.ok) {
+        const list = await res.json();
+        document.getElementById('history-table-body').innerHTML = list.map(c => `
+          <tr class="hover:bg-slate-900/40 transition">
+            <td class="p-4 font-mono font-bold text-indigo-400">${c.id}</td>
+            <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-800 font-bold text-[10px] text-slate-400">${c.status}</span></td>
+            <td class="p-4 font-mono text-slate-400">${c.duration}s allocation profile</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    async function fetchTelemetryMetrics() {
+      const res = await fetch(`${API_BASE}/api/admin/metrics`);
+      if (res.ok) {
+        const m = await res.json();
+        document.getElementById('metric-active').innerText = m.activeSessions;
+        document.getElementById('metric-peers').innerText = m.connectedParticipants;
+      }
+    }
+
+    async function initWorkspaceRoomPipeline() {
+      showView('view-room');
+      document.getElementById('chat-messages').innerHTML = '';
+
+      socket = io(API_BASE);
+      socket.emit('join-session', { sessionId: targetSession.id, role: userProfile.role, name: userProfile.name });
+
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('local-video').srcObject = localStream;
+
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+        pc.ontrack = (e) => {
+          document.getElementById('remote-video').srcObject = e.streams[0];
+          document.getElementById('remote-video').classList.remove('hidden');
+          document.getElementById('video-placeholder').classList.add('hidden');
+        };
+
+        pc.onicecandidate = (e) => e.candidate && socket.emit('signal', { candidate: e.candidate });
+
+        if (userProfile.role === 'AGENT') {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit('signal', { offer });
+        }
+
+        socket.on('signal', async (data) => {
+          if (data.offer) {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit('signal', { answer });
+          } else if (data.answer) {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          } else if (data.candidate) {
+            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+          }
+        });
+
+        socket.on('message-received', (msg) => { renderChatMessage(msg); });
+
+      } catch (err) {
+        document.getElementById('webrtc-status-badge').innerText = "Device Blocked";
+        document.getElementById('webrtc-status-badge').parentElement.classList.replace('bg-emerald-500', 'bg-rose-500');
+      }
+
+      setInterval(() => {
+        document.getElementById('telemetry-bitrate').innerText = Math.floor(1390 + Math.random() * 50) + " kbps";
+      }, 3000);
+    }
+
+    document.getElementById('chat-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      if (!input.value.trim() || !socket) return;
+      socket.emit('send-message', { text: input.value, senderName: userProfile.name, senderRole: userProfile.role });
+      input.value = '';
+    });
+
+    function renderChatMessage(msg) {
+      const container = document.getElementById('chat-messages');
+      const isSelf = msg.senderName === userProfile.name;
+      const box = document.createElement('div');
+      box.className = `flex flex-col ${isSelf ? 'items-end' : 'items-start'}`;
+      box.innerHTML = `
+        <span class="text-[10px] text-slate-500 mb-0.5">${msg.senderName} • ${msg.senderRole}</span>
+        <div class="p-3 rounded-2xl text-xs max-w-[85%] leading-relaxed ${isSelf ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none'}">${msg.text}</div>
+      `;
+      container.appendChild(box);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function toggleAudio() {
+      micEnabled = !micEnabled;
+      localStream.getAudioTracks().forEach(t => t.enabled = micEnabled);
+      document.getElementById('btn-toggle-audio').className = micEnabled ? "p-3 bg-slate-900 border border-slate-800 text-slate-200 rounded-xl hover:bg-slate-800 transition" : "p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl hover:bg-rose-500/20 transition";
+    }
+
+    function toggleVideo() {
+      camEnabled = !camEnabled;
+      localStream.getVideoTracks().forEach(t => t.enabled = camEnabled);
+      document.getElementById('btn-toggle-video').className = camEnabled ? "p-3 bg-slate-900 border border-slate-800 text-slate-200 rounded-xl hover:bg-slate-800 transition" : "p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl hover:bg-rose-500/20 transition";
+    }
+
+    async function exitCallRoom() {
+      if (socket) socket.disconnect();
+      if (pc) pc.close();
+      if (localStream) localStream.getTracks().forEach(t => t.stop());
+      
+      if (userProfile.role === 'AGENT') {
+        await fetch(`${API_BASE}/api/sessions/${targetSession.id}/end`, { method: 'POST' });
+        showView('view-app');
+        document.getElementById('session-initial').classList.remove('hidden');
+        document.getElementById('session-ready').classList.add('hidden');
+        switchTab('DASHBOARD');
+      } else {
+        window.location.href = window.location.origin + window.location.pathname;
+      }
+    }
+
+    function logout() { token = ""; userProfile = null; showView('view-login'); }
+  </script>
+</body>
+</html>
